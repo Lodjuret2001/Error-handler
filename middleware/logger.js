@@ -1,7 +1,10 @@
-const logger = (req, res, next) => {
-  console.log("Before");
-  next();
-  console.log("After");
+const beforeLogger = (req, res, next) => {
+  console.log("Request sent...");
+  return next();
 };
 
-export default logger;
+const afterLogger = (req, res) => {
+  console.log("Request succsessfully handled...");
+};
+
+export { beforeLogger, afterLogger };

@@ -1,18 +1,29 @@
 import express from "express";
+import Joi from "joi";
 import errorHandler from "./middleware/errorHandle.js";
-import logger from "./middleware/logger.js";
+import AppError from "./AppError.js";
+import { beforeLogger, afterLogger } from "./middleware/logger.js";
 import tryCatch from "./utils/tryCatch.js";
-import loginValidation from "./middleware/loginValidation.js";
+import { USERNAME_EXISTS } from "./constants/errorCodes.js";
 const app = express();
 
-app.use(logger);
+app.use(express.json(), beforeLogger);
+
+const loginSchema = Joi.object({
+  username: Joi.string().min(3).max(30).required(),
+  password: Joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")).required(),
+});
 
 const getPosts = () => undefined;
+const getUser = () => {
+  return { username: "Lodjuret2001", password: "ABC123456789" };
+};
 
 app.get(
   "/",
   tryCatch(async (req, res) => {
-    if (!req) {
+    const posts = getPosts();
+    if (!posts) {
       throw new Error("Could not get homepage...");
     }
     console.log("Home page");
@@ -20,11 +31,10 @@ app.get(
   })
 );
 
-
 app.get(
   "/posts",
-  tryCatch(async (req, res, next) => {
-    const posts = await getPosts();
+  tryCatch(async (req, res) => {
+    const posts = "POSTS XD";
     if (!posts) {
       throw new Error("Could not get any posts...");
     }
@@ -35,14 +45,22 @@ app.get(
 
 app.post(
   "/login",
-  loginValidation,
   tryCatch(async (req, res) => {
-    console.log('You logged in! :)');
-    res.send('You logged in! :)')
+    const { error } = loginSchema.validate(req.body);
+    const user = getUser();
+    if (error) {
+      throw error;
+    }
+    if (user.username === req.body.username) {
+      throw new AppError(USERNAME_EXISTS, "Username already exists", 400);
+    } else {
+      console.log("User created! :)");
+      res.send("User created! :)");
+    }
   })
 );
 
-app.use(errorHandler);
+app.use(errorHandler, afterLogger);
 
 const PORT = 3000;
 app.listen(PORT, () => {
